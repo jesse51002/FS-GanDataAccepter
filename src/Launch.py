@@ -516,7 +516,7 @@ def launch():
         for dir in dirs:
             delete_empty(dir)
         
-        description_label = tkinter.Label(root, text="Select file save loaction\nThis will also upload save data to aws cloud", font=('Times 16'))
+        description_label = tkinter.Label(root, text="Select file save loaction", font=('Times 16'))
         description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
         
         confirmed = False
