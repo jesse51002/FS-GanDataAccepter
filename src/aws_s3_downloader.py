@@ -2,14 +2,18 @@ import os
 import math
 import shutil
 import boto3
-from threading import Thread, Lock
+from threading import Thread
 from s3_list import list_s3_from_root
 
 # s3 boto documentation
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html
 
 # Test it on a service (yours may be different)
-s3resource = boto3.client('s3')
+s3resource = boto3.client(
+    's3',
+    aws_access_key_id="AKIATY5APZJSNEGGNH6X",
+    aws_secret_access_key="sauP9Fll/+AUHLj8EO0vgs4I+SJTZCNgFQm6Yhdv"      
+)
 BUCKET_NAME = "fs-upper-body-gan-dataset"
 MAX_FOLDER_COUNT_DOWNLOAD = 10000000
 
@@ -90,24 +94,36 @@ def get_download_folders(prefix, clean_dir, accept_dir, reject_dir, index=0, tot
 def download_from_aws(split_dir, accept_dir, reject_dir, index=0, total_count=1):
     rel_base = split_dir.replace("\\", "/").split("/")[-1] + "/"
     
-    download_folders = get_download_folders(rel_base, split_dir, accept_dir, reject_dir, index, total_count)
-
+    # download_folders = get_download_folders(rel_base, split_dir, accept_dir, reject_dir, index, total_count)
+    download_folders = ["clean_images/adventure portrait canon.zip"]
+    
     threads = []
     
     for key in download_folders:
         abs_folder_path = os.path.join(split_dir, key[len(rel_base):-4])
 
-        zip_process_thread = download_aws_folder(abs_folder_path, key)
+        attempt = 0
+        while attempt < 3:
+            try:
+                zip_process_thread = download_aws_folder(abs_folder_path, key)
+                break
+            except Exception as e:
+                attempt += 1
+            
         threads.append(zip_process_thread)
         
         back_rem_key = "clean_images_background_removed" + "/" + "/".join(key.split("/")[1:])
         
         back_rem_abs_pth = os.path.join("/".join(os.path.split(split_dir)[:-1]) + "/clean_images_background_removed", key[len(rel_base):-4])
-        try:
-            zip_process_thread = download_aws_folder(back_rem_abs_pth, back_rem_key)
-        except Exception as e:
-            print(e)
-            
+        attempt = 0
+        while attempt < 3:
+            try:
+                zip_process_thread = download_aws_folder(back_rem_abs_pth, back_rem_key)
+                break
+            except Exception as e:
+                attempt += 1
+                print(e)
+              
         threads.append(zip_process_thread)
 
     for t in threads:

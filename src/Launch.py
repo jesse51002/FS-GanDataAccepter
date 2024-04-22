@@ -2,10 +2,9 @@ import os
 import json
 from multiprocessing import Queue
 import time
+from threading import Thread
 
-import boto3
 from PIL import Image
-from datetime import datetime
 try:
     from PIL import ImageTk
     import tkinter
@@ -263,7 +262,7 @@ def get_root():
     
     def folder_select_pressed():
         nonlocal  selected_folder
-        selected_folder = filedialog.askdirectory(mustexist=True)
+        selected_folder = filedialog.askdirectory()
         description_label.configure(text=f"Select a folder to store the data \nCurrent Selection: {selected_folder}")    
     
     def confirm():
@@ -470,12 +469,20 @@ def launch():
         description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
         root.update()
         
-        download_from_aws(
+        
+        download_thread = Thread(target=download_from_aws, args=(
             CLEAN_BODY_IMAGES_DIR,
             ACCEPTED_BODY_IMAGES_DIR,
             REJECTED_BODY_IMAGES_DIR,
             employee_idx, employee_count
-        )
+        ))
+        download_thread.start()
+        
+        while download_thread.is_alive():
+            root.update()
+            time.sleep(0.1)
+            
+        download_thread.join()
         
         description_label.configure(text="Loading Images...")   
         root.update()
