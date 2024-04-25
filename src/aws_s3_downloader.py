@@ -45,37 +45,17 @@ def download_aws_folder(abs_folder_path, s3_key):
     return zip_process_thread
     
 
-def get_download_folders(prefix, clean_dir, accept_dir, reject_dir, index=0, total_count=1):
+def get_download_folders(prefix, clean_dir):
+    return ["clean_images/adventure portrait canon.zip"]
+    
     keys_in_s3 = list_s3_from_root(prefix, clean_dir)
     if prefix in keys_in_s3:
         keys_in_s3.remove(prefix)
     if prefix + ".ipynb_checkpoints.zip" in keys_in_s3:
         keys_in_s3.remove(prefix + ".ipynb_checkpoints.zip")
     keys_in_s3.sort()
-    
-    amount_per = math.ceil(len(keys_in_s3) / total_count)
-    start_idx = index * amount_per
-    end_idx = min((index+ 1) * amount_per, len(keys_in_s3))
-    
-    keys_in_s3 = keys_in_s3[start_idx:end_idx]
-    
-    
-    # Gets folders that have already been downloaded
-    finished_download = os.listdir(clean_dir) + os.listdir(accept_dir) + os.listdir(reject_dir) 
 
-    i = 0
-    split_keys = []
-    while i < len(keys_in_s3):
-        key = keys_in_s3[i].split("/")[-1][:-4]
-        split_keys.append(key)
-        for finished in finished_download:
-            if finished == key:
-                keys_in_s3.pop(i)
-                i -= 1
-                break
-        
-        i += 1
-
+    """
     started_directories = set(os.listdir(accept_dir) + os.listdir(reject_dir))
     split_keys = set(split_keys)
     not_done_directories = set(os.listdir(clean_dir))
@@ -87,15 +67,37 @@ def get_download_folders(prefix, clean_dir, accept_dir, reject_dir, index=0, tot
         shutil.rmtree(os.path.join(clean_dir, remove_dir))
         back_rem_clean_dir = "/".join(os.path.split(clean_dir)[:-1]) + "/clean_images_background_removed"
         shutil.rmtree(os.path.join(back_rem_clean_dir, remove_dir))
+    """
     
-    return keys_in_s3[:min(MAX_FOLDER_COUNT_DOWNLOAD, len(keys_in_s3))]
+    return keys_in_s3
+
+def remove_already_downloaded(folder_list, clean_dir, accept_dir, reject_dir):
+    # Gets folders that have already been downloaded
+    finished_download = os.listdir(clean_dir) + os.listdir(accept_dir) + os.listdir(reject_dir) 
+
+    i = 0
+    split_keys = []
+    while i < len(folder_list):
+        key = folder_list[i].split("/")[-1][:-4]
+        split_keys.append(key)
+        for finished in finished_download:
+            if finished == key:
+                folder_list.pop(i)
+                i -= 1
+                break
+        
+        i += 1
+    
+    return folder_list
+    
             
                 
-def download_from_aws(split_dir, accept_dir, reject_dir, index=0, total_count=1):
+def download_from_aws(split_dir, accept_dir, reject_dir, download_folders):
     rel_base = split_dir.replace("\\", "/").split("/")[-1] + "/"
     
     # download_folders = get_download_folders(rel_base, split_dir, accept_dir, reject_dir, index, total_count)
-    download_folders = ["clean_images/adventure portrait canon.zip"]
+    # download_folders = 
+    download_folders = remove_already_downloaded(download_folders, split_dir, accept_dir, reject_dir)
     
     threads = []
     

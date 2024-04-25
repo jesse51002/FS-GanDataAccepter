@@ -12,7 +12,7 @@ try:
 except ImportError:
     tkinter = None
 
-from aws_s3_downloader import download_from_aws
+from aws_s3_downloader import download_from_aws, get_download_folders
 from Utils import get_file_path, delete_empty, find_images
 
 os.system('xset r off')
@@ -31,6 +31,7 @@ REJECTED_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "reject_images_background
 
 ACCEPT_MODE = 0
 EXPORT_MODE = 1
+DOWNLOAD_MODE = 2
 
 
 # Can either be hair or body
@@ -254,115 +255,73 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
     print("Ending accepting GUI")
 
 def get_root():
-    description_label = tkinter.Label(root, text="Select a folder to store the data", font=('Times 16'))
-    description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
+    root_folder = os.path.join(os.getcwd(), "data")
     
-    selected_folder = None
-    confirmed = False
+    if not os.path.isdir(root_folder):
+        os.makedirs(root_folder)
     
-    def folder_select_pressed():
-        nonlocal  selected_folder
-        selected_folder = filedialog.askdirectory()
-        description_label.configure(text=f"Select a folder to store the data \nCurrent Selection: {selected_folder}")    
-    
-    def confirm():
-        nonlocal  confirmed
-        if selected_folder != None:
-            confirmed = True     
-    
-    select_button = tkinter.Button(root, text="Select Folder", font=('Times 16'), command=folder_select_pressed)
-    select_button.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="n", width=200, height=100)
-    
-    confirm_button = tkinter.Button(root, text="Confirm", font=('Times 16'), command=confirm)
-    confirm_button.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2) + 200, anchor="n", width=200, height=50)
-    
-    while not confirmed:
-        if CLOSED:
-            break
-        time.sleep(0.05)
-        root.update()
-        
-    description_label.destroy()
-    select_button.destroy()
-    confirm_button.destroy()
-    root.update()
-        
-    return selected_folder
+    return root_folder
 
-def get_index():
-    
-    index_use = """
-    This is for splitting up the data. You need to input the total amount of people working the data labeling
-    process and also the assigned number you are given out of them.
-    
-    Example: There are 5 people working on it so there are employees with assigned number from (0 - 4). If I was assigned "2" I would put 2 in "assigned number" and 5 in "Total Workers" 
-    """
+def get_download_numbers(all_folders):
+    index_use = f"Download folders from the selected indexes.\nThere are a total of {len(all_folders)} folders"
     
     confirmed = False
     
     description_label = tkinter.Label(root, text=index_use, font=('Times 16'))
     description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=300)
     
-    assigned_label = tkinter.Label(root, text="Assigned Number", font=('Times 16'))
-    assigned_label.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="ne", width=200, height=50)
+    start_label = tkinter.Label(root, text="Start Folder", font=('Times 16'))
+    start_label.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="ne", width=200, height=50)
     
-    assigned_input = tkinter.Entry(root, text="", font=('Times 16'))
-    assigned_input.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="ne", width=200, height=50)
+    start_input = tkinter.Entry(root, text="", font=('Times 16'))
+    start_input.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="ne", width=200, height=50)
     
-    total_label = tkinter.Label(root, text="Total Workers", font=('Times 16'))
-    total_label.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="nw", width=200, height=50)
+    until_label = tkinter.Label(root, text="Unitl Folder", font=('Times 16'))
+    until_label.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="nw", width=200, height=50)
     
-    total_input = tkinter.Entry(root, text="", font=('Times 16'))
-    total_input.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="nw", width=200, height=50)
-    
-    worker_id = None
-    total_amount = None
-    
-    worker_id_file = os.path.join(ROOT, "worker_split")
-    if os.path.isfile(worker_id_file):
-        with open(worker_id_file, "r") as f:
-            data = json.load(f)
-            worker_id = data["worker_id"]
-            assigned_input.insert(0, worker_id)
-            
-            total_amount = data["total_amount"]
-            total_input.insert(0, total_amount)
-            
-            
+    until_input = tkinter.Entry(root, text="", font=('Times 16'))
+    until_input.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="nw", width=200, height=50)
     
     error_txt = tkinter.Label(root, text="", font=('Times 16'))
     error_txt.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2) + 275, anchor="n", width=ACCEPT_IMAGE_SIZE * 2, height=50)
     
+    chosen_start = None
+    chosen_end = None
+    
     def confirm():
+        nonlocal chosen_start
+        nonlocal chosen_end
         nonlocal confirmed
-        nonlocal worker_id
-        nonlocal total_amount
         
-        worker_id_input = assigned_input.get()
+        start_user_input = start_input.get()
         try:
-            worker_id = int(worker_id_input)
+            chosen_start = int(start_user_input)
         except:
-            error_txt.configure(text=f"Assigned Number must be number")
+            error_txt.configure(text=f"'Start Folder' must be number")
             return
         
-        total_amount_input = total_input.get()
+        until_user_input = until_input.get()
         try:
-            total_amount = int(total_amount_input)
+            chosen_end = int(until_user_input)
         except:
-            error_txt.configure(text=f"Total Amount must be number")
+            error_txt.configure(text=f"'Until Folder' must be number")
             return
         
-        if total_amount < 1:
-            error_txt.configure(text=f"Total amount must be atleast 1")
+        if chosen_end < 1:
+            error_txt.configure(text=f"'Until Folder' must be atleast 1")
             return
-            
-        if worker_id >= total_amount or worker_id < 0:
-            error_txt.configure(text=f"Since total amount is {total_amount} then assigned number must be from [0 - {total_amount -1}].\n'{worker_id}' is not within that range")
+        
+        if chosen_start >= chosen_end:
+            error_txt.configure(text=f"'Start Folder' must be less than 'Until Folder'")
+            return    
+        
+        if chosen_end > len(all_folders) or chosen_start < 0:
+            error_txt.configure(text=f"Since folder amount is {len(all_folders)} then start number and total amount must be between [0 - {len(all_folders)}].")
             return
         
         confirmed = True
     
-    confirm_button = tkinter.Button(root, text="Confirm", font=('Times 16'), command=confirm)
+    confirm_button = tkinter.Button(root, text="Download", font=('Times 16'), command=confirm)
     confirm_button.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2) + 200, anchor="n", width=200, height=50)
     
     
@@ -373,23 +332,15 @@ def get_index():
         root.update()
         
     description_label.destroy()
-    assigned_label.destroy()
-    assigned_input.destroy()
-    total_label.destroy()
-    total_input.destroy()
+    start_label.destroy()
+    start_input.destroy()
+    until_label.destroy()
+    until_input.destroy()
     confirm_button.destroy()
+    error_txt.destroy()
     root.update()
     
-    if os.path.isfile(worker_id_file):
-        os.remove(worker_id_file)
-        
-    with open(worker_id_file, "w") as f:
-        json.dump({
-            "worker_id" : worker_id,
-            "total_amount": total_amount
-        }, f)
-    
-    return worker_id, total_amount
+    return chosen_start, chosen_end
 
 
 def get_mode():
@@ -402,12 +353,19 @@ def get_mode():
     def select_export():
         nonlocal mode_selected
         mode_selected = EXPORT_MODE
+        
+    def select_download():
+        nonlocal mode_selected
+        mode_selected = DOWNLOAD_MODE
     
     label_button = tkinter.Button(root, text="Data Labeling", font=('Times 16'), command=select_accept)
-    label_button.place(x=ACCEPT_IMAGE_SIZE - 20, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="e", width=400, height=400)
+    label_button.place(x=ACCEPT_IMAGE_SIZE - 450, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
+    
+    download_button = tkinter.Button(root, text="Download Data", font=('Times 16'), command=select_download)
+    download_button.place(x=ACCEPT_IMAGE_SIZE , y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
     
     export_button = tkinter.Button(root, text="Export Data", font=('Times 16'), command=select_export)
-    export_button.place(x=ACCEPT_IMAGE_SIZE + 20, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="w", width=400, height=400)
+    export_button.place(x=ACCEPT_IMAGE_SIZE + 450, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
     
     while mode_selected == -1:
         if CLOSED:
@@ -416,6 +374,7 @@ def get_mode():
         root.update()
         
     label_button.destroy()
+    download_button.destroy()
     export_button.destroy()
     root.update()
     
@@ -444,9 +403,7 @@ def launch():
 
     REJECTED_BODY_IMAGES_DIR = os.path.join(ROOT, "rejected_images")
     REJECTED_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "reject_images_background_removed")
-    
-    COMPETE_DOWNLOAD_FILE = os.path.join(ROOT, "finished_downloading")
-    
+        
     dirs = [
         CLEAN_BODY_IMAGES_DIR, CLEAN_BODY_BACK_REM_IMAGES_DIR,
         ACCEPTED_BODY_IMAGES_DIR, ACCEPT_BODY_BACK_REM_IMAGES_DIR,
@@ -457,14 +414,21 @@ def launch():
         if not os.path.isdir(dir):
             os.makedirs(dir)
     
-    employee_idx, employee_count = get_index()
-
+    if CLOSED:
+        return
+    
     mode = get_mode()
     
     if CLOSED:
         return
     
-    if mode == ACCEPT_MODE:
+    if mode == DOWNLOAD_MODE:
+        rel_base = CLEAN_BODY_IMAGES_DIR.replace("\\", "/").split("/")[-1] + "/"
+        all_folders = get_download_folders(rel_base, CLEAN_BODY_IMAGES_DIR)
+        start_idx, end_idx = get_download_numbers(all_folders)
+        
+        mode = ACCEPT_MODE
+        
         description_label = tkinter.Label(root, text="Downloading Data....\n(This might take a bit)", font=('Times 16'))
         description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
         root.update()
@@ -474,7 +438,7 @@ def launch():
             CLEAN_BODY_IMAGES_DIR,
             ACCEPTED_BODY_IMAGES_DIR,
             REJECTED_BODY_IMAGES_DIR,
-            employee_idx, employee_count
+            all_folders[start_idx:end_idx]
         ))
         download_thread.start()
         
@@ -484,7 +448,14 @@ def launch():
             
         download_thread.join()
         
-        description_label.configure(text="Loading Images...")   
+        description_label.destroy()
+    
+    if CLOSED:
+        return
+    
+    if mode == ACCEPT_MODE:
+        description_label = tkinter.Label(root, text="Loading Images...", font=('Times 16'))
+        description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
         root.update()
         
         accept_queue = []
@@ -515,6 +486,10 @@ def launch():
         
         for dir in dirs:
             delete_empty(dir)
+            
+        for dir in dirs:
+            if not os.path.isdir(dir):
+                os.makedirs(dir)
         
         description_label = tkinter.Label(root, text="Select file save loaction", font=('Times 16'))
         description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
@@ -532,10 +507,18 @@ def launch():
             folders_uncomplete = set(os.listdir(CLEAN_BODY_IMAGES_DIR))
             folders_finished = folders_started - folders_uncomplete
             
+            accepted_list = find_images(ACCEPTED_BODY_IMAGES_DIR)
+            rejected_list = find_images(REJECTED_BODY_IMAGES_DIR)
+            unfinished_list = find_images(CLEAN_BODY_IMAGES_DIR)
+            
+            accepted_percentage = 100 * len(accepted_list) / (len(accepted_list) + len(rejected_list))
+            completion_percentage = 100 * (len(accepted_list) + len(rejected_list)) / (len(accepted_list) + len(rejected_list) + len(unfinished_list))
+            
+            
             export_dict = {
-                "accepted": find_images(ACCEPTED_BODY_IMAGES_DIR),
-                "rejected": find_images(REJECTED_BODY_IMAGES_DIR),
-                "unfinished": find_images(CLEAN_BODY_IMAGES_DIR),
+                "accepted": accepted_list,
+                "rejected": rejected_list,
+                "unfinished": unfinished_list,
                 "finished_folders": list(folders_finished)
             }
             
@@ -545,8 +528,16 @@ def launch():
                     rel_pth = "/".join(img_pth.replace("\\", "/").split("/")[-2:])
                     export_dict[key][i] = rel_pth
             
+            export_dict["!worker_data"] = {
+                    "Total accepted": len(accepted_list),
+                    "Total rejected": len(rejected_list),
+                    "Images Left": len(unfinished_list),
+                    "Accepting Perecentage": f"{accepted_percentage}%",
+                    "Completion Percentage": f"{completion_percentage}%"
+                }
+            
             with open(save_file_location, "w") as f: 
-                json.dump(export_dict, f, indent=2)
+                json.dump(export_dict, f, indent=2, sort_keys=True)
             
             # current_datetime = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
             # s3resource.upload_file(save_file_location, BUCKET_NAME, "outsourced_results/" + current_datetime + ".json")
