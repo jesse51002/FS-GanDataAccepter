@@ -4,6 +4,7 @@ import shutil
 import boto3
 from threading import Thread
 from s3_list import list_s3_from_root
+from create_aws_clean_list import EXPORT_FILE_NAME
 
 # s3 boto documentation
 # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/s3.html
@@ -46,15 +47,26 @@ def download_aws_folder(abs_folder_path, s3_key):
     
 
 def get_download_folders(prefix, clean_dir):
-    return ["clean_images/adventure portrait canon.zip"]
+    # return ["clean_images/adventure portrait canon.zip"]
+    keys_in_s3 = []
+    # if os.path.isfile(EXPORT_FILE_NAME):
+    with open(EXPORT_FILE_NAME, 'r') as file:
+        for x in file.readlines():
+            line = x.strip()
+            if len(line) != 0:
+                keys_in_s3.append(line)
+                
     
-    keys_in_s3 = list_s3_from_root(prefix, clean_dir)
-    if prefix in keys_in_s3:
-        keys_in_s3.remove(prefix)
-    if prefix + ".ipynb_checkpoints.zip" in keys_in_s3:
-        keys_in_s3.remove(prefix + ".ipynb_checkpoints.zip")
-    keys_in_s3.sort()
-
+    
+    """
+    else:
+        keys_in_s3 = list_s3_from_root(prefix, clean_dir)
+        if prefix in keys_in_s3:
+            keys_in_s3.remove(prefix)
+        if prefix + ".ipynb_checkpoints.zip" in keys_in_s3:
+            keys_in_s3.remove(prefix + ".ipynb_checkpoints.zip")
+        keys_in_s3.sort()
+    """
     """
     started_directories = set(os.listdir(accept_dir) + os.listdir(reject_dir))
     split_keys = set(split_keys)

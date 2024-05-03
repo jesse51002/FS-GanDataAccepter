@@ -427,6 +427,9 @@ def launch():
         all_folders = get_download_folders(rel_base, CLEAN_BODY_IMAGES_DIR)
         start_idx, end_idx = get_download_numbers(all_folders)
         
+        if start_idx is None or end_idx is None or CLOSED:
+            return
+        
         mode = ACCEPT_MODE
         
         description_label = tkinter.Label(root, text="Downloading Data....\n(This might take a bit)", font=('Times 16'))
