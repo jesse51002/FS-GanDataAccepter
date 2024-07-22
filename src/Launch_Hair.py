@@ -21,13 +21,10 @@ ROOT = "./"
 
 # Body files
 CLEAN_BODY_IMAGES_DIR = os.path.join(ROOT, "clean_images")
-CLEAN_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "clean_images_background_removed")
 
 ACCEPTED_BODY_IMAGES_DIR = os.path.join(ROOT, "accepted_images")
-ACCEPT_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "accept_images_background_removed")
 
 REJECTED_BODY_IMAGES_DIR = os.path.join(ROOT, "rejected_images")
-REJECTED_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "reject_images_background_removed")
 
 ACCEPT_MODE = 0
 EXPORT_MODE = 1
@@ -68,10 +65,7 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
     description_label.place(x=ACCEPT_IMAGE_SIZE, y=ACCEPT_IMAGE_SIZE, anchor="n", width=ACCEPT_IMAGE_SIZE * 2, height=200)
     
     color_image_label = tkinter.Label(root)
-    color_image_label.place(x=0, y=0, anchor="nw", width=ACCEPT_IMAGE_SIZE, height=ACCEPT_IMAGE_SIZE)
-    
-    back_rm_image_label = tkinter.Label(root)
-    back_rm_image_label.place(x=ACCEPT_IMAGE_SIZE, y=0, anchor="nw", width=ACCEPT_IMAGE_SIZE, height=ACCEPT_IMAGE_SIZE)
+    color_image_label.place(x=ACCEPT_IMAGE_SIZE, y=0, anchor="n", width=ACCEPT_IMAGE_SIZE, height=ACCEPT_IMAGE_SIZE)
     
     previous_stack = []
     resume_stack = []
@@ -97,16 +91,12 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
             break
     
         img_location = None
-        background_dir = None
         if "clean_images" in img_pth:
             img_location  = root_clean_dir
-            background_dir = CLEAN_BODY_BACK_REM_IMAGES_DIR
         elif "accepted" in img_pth:
             img_location = root_accepted_dir
-            background_dir = ACCEPT_BODY_BACK_REM_IMAGES_DIR
         else:
             img_location = root_rejected_dir
-            background_dir = REJECTED_BODY_BACK_REM_IMAGES_DIR
 
         
         pth_list = get_file_path(img_pth, img_location)
@@ -119,20 +109,7 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
         img = ImageTk.PhotoImage(pil_image)
         color_image_label.configure(image=img)
         color_image_label.image = img
-        
-        background_dir = os.path.join(background_dir, pth_list)
-        background_image_pth = os.path.join(background_dir, os.path.basename(img_pth))
-        if os.path.isfile(background_image_pth):
-            back_pil_image = Image.open(background_image_pth).resize((ACCEPT_IMAGE_SIZE, ACCEPT_IMAGE_SIZE),Image.LANCZOS)
-            back_img = ImageTk.PhotoImage(back_pil_image)
-            back_rm_image_label.configure(image=back_img)
-            back_rm_image_label.image = back_img
-        else:
-            background_image_pth = None
-            back_rm_image_label.configure(image=None)
-            back_rm_image_label.image = None
-        
-        
+         
         total_count = accept_count + reject_count
         if total_count > 0:
             accept_perc = (float(accept_count) / float(total_count)) * 100.0    
@@ -152,27 +129,14 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
         if not os.path.isdir(accepted_dir):
             os.makedirs(accepted_dir)
         accepted_pth = os.path.join(accepted_dir, os.path.basename(img_pth))
-        
-        # Gets background removed image save path
-        accept_back_dir = os.path.join(ACCEPT_BODY_BACK_REM_IMAGES_DIR, pth_list)
-        if not os.path.isdir(accept_back_dir):
-            os.makedirs(accept_back_dir)
-            
-        back_rm_accept_pth = os.path.join(accept_back_dir, os.path.basename(img_pth))
-        
+                    
         # Gets the images save path
         rejected_dir = os.path.join(root_rejected_dir, pth_list)
         if not os.path.isdir(rejected_dir):
             os.makedirs(rejected_dir)
         rejected_pth = os.path.join(rejected_dir, os.path.basename(img_pth))
         
-        # Gets background removed image save path
-        reject_back_dir = os.path.join(REJECTED_BODY_BACK_REM_IMAGES_DIR, pth_list)
-        if not os.path.isdir(reject_back_dir):
-            os.makedirs(reject_back_dir)
-                    
-        back_rm_reject_pth = os.path.join(reject_back_dir, os.path.basename(img_pth))
-        
+                            
         while not CLOSED:
             key = None
             if len(button_press_stack) != 0:
@@ -184,16 +148,11 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
             
             # Moves file to accepted
             if key == "A" or key == "a":
-                if img_location != accepted_dir:
+                if img_pth != accepted_pth:
                     # Write/ Overwrite accepted image
                     if os.path.isfile(accepted_pth):
                         os.remove(accepted_pth)
                     os.rename(img_pth, accepted_pth)
-                    
-                    if background_image_pth is not None:
-                        if os.path.isfile(back_rm_accept_pth):
-                            os.remove(back_rm_accept_pth)
-                        os.rename(background_image_pth, back_rm_accept_pth)
                     
                 previous_stack.insert(0, accepted_pth)
                 accept_count += 1
@@ -201,16 +160,11 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
                 break             
             # If rejected delete the image
             elif key == "R" or key == "r":
-                if img_location != rejected_pth:
+                if img_pth != rejected_pth:
                     # Write/ Overwrite rejected image
                     if os.path.isfile(rejected_pth):
                         os.remove(rejected_pth)
                     os.rename(img_pth, rejected_pth)
-                    
-                    if background_image_pth is not None:
-                        if os.path.isfile(back_rm_reject_pth):
-                            os.remove(back_rm_reject_pth)
-                        os.rename(background_image_pth, back_rm_reject_pth)
                 previous_stack.insert(0, rejected_pth)
                 reject_count += 1
                 print("Rejected a total of", reject_count)
@@ -223,7 +177,10 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
                 
                 resume_stack.insert(0, img_pth)
                 resume_stack.insert(0, previous_stack.pop(0))
-                accept_count -= 1
+                if "accept" in resume_stack[0]:
+                    accept_count -= 1
+                elif "reject" in resume_stack[0]:
+                    accept_count -= 1
                 break
             # Forcefully ends the application
             elif key == "H" or key == "h":
@@ -244,7 +201,6 @@ def parse_style(accept_queue : list, root_clean_dir : str, root_accepted_dir : s
     
     description_label.destroy()
     color_image_label.destroy()
-    back_rm_image_label.destroy()
 
     total_count = accept_count + reject_count
     if total_count > 0:
@@ -262,86 +218,6 @@ def get_root():
     
     return root_folder
 
-def get_download_numbers(all_folders):
-    index_use = f"Download folders from the selected indexes.\nThere are a total of {len(all_folders)} folders"
-    
-    confirmed = False
-    
-    description_label = tkinter.Label(root, text=index_use, font=('Times 16'))
-    description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=300)
-    
-    start_label = tkinter.Label(root, text="Start Folder", font=('Times 16'))
-    start_label.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="ne", width=200, height=50)
-    
-    start_input = tkinter.Entry(root, text="", font=('Times 16'))
-    start_input.place(x=ACCEPT_IMAGE_SIZE - 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="ne", width=200, height=50)
-    
-    until_label = tkinter.Label(root, text="Unitl Folder", font=('Times 16'))
-    until_label.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="nw", width=200, height=50)
-    
-    until_input = tkinter.Entry(root, text="", font=('Times 16'))
-    until_input.place(x=ACCEPT_IMAGE_SIZE + 50, y=int(ACCEPT_IMAGE_SIZE / 2) + 75, anchor="nw", width=200, height=50)
-    
-    error_txt = tkinter.Label(root, text="", font=('Times 16'))
-    error_txt.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2) + 275, anchor="n", width=ACCEPT_IMAGE_SIZE * 2, height=50)
-    
-    chosen_start = None
-    chosen_end = None
-    
-    def confirm():
-        nonlocal chosen_start
-        nonlocal chosen_end
-        nonlocal confirmed
-        
-        start_user_input = start_input.get()
-        try:
-            chosen_start = int(start_user_input)
-        except:
-            error_txt.configure(text=f"'Start Folder' must be number")
-            return
-        
-        until_user_input = until_input.get()
-        try:
-            chosen_end = int(until_user_input)
-        except:
-            error_txt.configure(text=f"'Until Folder' must be number")
-            return
-        
-        if chosen_end < 1:
-            error_txt.configure(text=f"'Until Folder' must be atleast 1")
-            return
-        
-        if chosen_start >= chosen_end:
-            error_txt.configure(text=f"'Start Folder' must be less than 'Until Folder'")
-            return    
-        
-        if chosen_end > len(all_folders) or chosen_start < 0:
-            error_txt.configure(text=f"Since folder amount is {len(all_folders)} then start number and total amount must be between [0 - {len(all_folders)}].")
-            return
-        
-        confirmed = True
-    
-    confirm_button = tkinter.Button(root, text="Download", font=('Times 16'), command=confirm)
-    confirm_button.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2) + 200, anchor="n", width=200, height=50)
-    
-    
-    while not confirmed:
-        if CLOSED:
-            break
-        time.sleep(0.05)
-        root.update()
-        
-    description_label.destroy()
-    start_label.destroy()
-    start_input.destroy()
-    until_label.destroy()
-    until_input.destroy()
-    confirm_button.destroy()
-    error_txt.destroy()
-    root.update()
-    
-    return chosen_start, chosen_end
-
 
 def get_mode():
     mode_selected = -1
@@ -354,15 +230,8 @@ def get_mode():
         nonlocal mode_selected
         mode_selected = EXPORT_MODE
         
-    def select_download():
-        nonlocal mode_selected
-        mode_selected = DOWNLOAD_MODE
-    
     label_button = tkinter.Button(root, text="Data Labeling", font=('Times 16'), command=select_accept)
     label_button.place(x=ACCEPT_IMAGE_SIZE - 450, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
-    
-    download_button = tkinter.Button(root, text="Download Data", font=('Times 16'), command=select_download)
-    download_button.place(x=ACCEPT_IMAGE_SIZE , y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
     
     export_button = tkinter.Button(root, text="Export Data", font=('Times 16'), command=select_export)
     export_button.place(x=ACCEPT_IMAGE_SIZE + 450, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="center", width=400, height=400)
@@ -374,7 +243,6 @@ def get_mode():
         root.update()
         
     label_button.destroy()
-    download_button.destroy()
     export_button.destroy()
     root.update()
     
@@ -384,29 +252,21 @@ def get_mode():
 def launch():  
     global ROOT
     global CLEAN_BODY_IMAGES_DIR
-    global CLEAN_BODY_BACK_REM_IMAGES_DIR
     global ACCEPTED_BODY_IMAGES_DIR
-    global ACCEPT_BODY_BACK_REM_IMAGES_DIR
     global REJECTED_BODY_IMAGES_DIR
-    global REJECTED_BODY_BACK_REM_IMAGES_DIR
     
     
     ROOT = get_root()
 
     # Body files
     CLEAN_BODY_IMAGES_DIR = os.path.join(ROOT, "clean_images")
-    CLEAN_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "clean_images_background_removed")
-
     ACCEPTED_BODY_IMAGES_DIR = os.path.join(ROOT, "accepted_images")
-    ACCEPT_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "accept_images_background_removed")
-
     REJECTED_BODY_IMAGES_DIR = os.path.join(ROOT, "rejected_images")
-    REJECTED_BODY_BACK_REM_IMAGES_DIR = os.path.join(ROOT, "reject_images_background_removed")
         
     dirs = [
-        CLEAN_BODY_IMAGES_DIR, CLEAN_BODY_BACK_REM_IMAGES_DIR,
-        ACCEPTED_BODY_IMAGES_DIR, ACCEPT_BODY_BACK_REM_IMAGES_DIR,
-        REJECTED_BODY_IMAGES_DIR, REJECTED_BODY_BACK_REM_IMAGES_DIR
+        CLEAN_BODY_IMAGES_DIR,
+        ACCEPTED_BODY_IMAGES_DIR,
+        REJECTED_BODY_IMAGES_DIR
         ]
     
     for dir in dirs:
@@ -421,40 +281,6 @@ def launch():
     if CLOSED:
         return
     
-    if mode == DOWNLOAD_MODE:
-        rel_base = CLEAN_BODY_IMAGES_DIR.replace("\\", "/").split("/")[-1] + "/"
-        all_folders = get_download_folders(rel_base, CLEAN_BODY_IMAGES_DIR)
-        start_idx, end_idx = get_download_numbers(all_folders)
-        
-        if start_idx is None or end_idx is None or CLOSED:
-            return
-        
-        mode = ACCEPT_MODE
-        
-        description_label = tkinter.Label(root, text="Downloading Data....\n(This might take a bit)", font=('Times 16'))
-        description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
-        root.update()
-        
-        
-        download_thread = Thread(target=download_from_aws, args=(
-            CLEAN_BODY_IMAGES_DIR,
-            ACCEPTED_BODY_IMAGES_DIR,
-            REJECTED_BODY_IMAGES_DIR,
-            all_folders[start_idx:end_idx]
-        ))
-        download_thread.start()
-        
-        while download_thread.is_alive():
-            root.update()
-            time.sleep(0.1)
-            
-        download_thread.join()
-        
-        description_label.destroy()
-    
-    if CLOSED:
-        return
-    
     if mode == ACCEPT_MODE:
         description_label = tkinter.Label(root, text="Loading Images...", font=('Times 16'))
         description_label.place(x=ACCEPT_IMAGE_SIZE, y=int(ACCEPT_IMAGE_SIZE / 2), anchor="s", width=ACCEPT_IMAGE_SIZE * 2, height=200)
@@ -463,6 +289,15 @@ def launch():
         accept_queue = []
 
         clean_images = find_images(CLEAN_BODY_IMAGES_DIR)
+        
+        def get_priority_numer(pth):
+            for x in ["afro", "wavy"]:
+                if x in pth:
+                    return f"0-{pth}"
+            
+            return f"1-{pth}"
+         
+        clean_images = sorted(clean_images, key=lambda x: get_priority_numer(x))
         for img in clean_images:
             accept_queue.append(img)
         print(f"Instantiates accept queue with {len(clean_images)} clean images")
