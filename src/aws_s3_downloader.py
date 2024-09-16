@@ -12,8 +12,8 @@ from create_aws_clean_list import EXPORT_FILE_NAME
 # Test it on a service (yours may be different)
 s3resource = boto3.client(
     's3',
-    aws_access_key_id="AKIATY5APZJSNEGGNH6X",
-    aws_secret_access_key="sauP9Fll/+AUHLj8EO0vgs4I+SJTZCNgFQm6Yhdv"      
+    aws_access_key_id="",
+    aws_secret_access_key=""      
 )
 BUCKET_NAME = "fs-upper-body-gan-dataset"
 MAX_FOLDER_COUNT_DOWNLOAD = 10000000
